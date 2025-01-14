@@ -104,12 +104,13 @@
 					console.log("Upload successful:", response.data);
 
 					// 处理上传后的响应
+					console.log("Upload successful:", response.data.message);
 					if (response.data.code === 0) {
 						const currentTime = new Date().toLocaleString();
-						this.uploadStatus.push(`<span style="font-weight: bold; color: blue;">[${currentTime}]</span> 文件上传成功`);
+						this.uploadStatus.push(`<span style="font-weight: bold; color: blue;">[${currentTime}]</span> 文件处理成功`);
 					} else {
 						const currentTime = new Date().toLocaleString();
-						this.uploadStatus.push(`<span style="font-weight: bold; color: blue;">[${currentTime}]</span> 文件上传失败，原因：${response.data.message}`);
+						this.uploadStatus.push(`<span style="font-weight: bold; color: blue;">[${currentTime}]</span> 文件处理失败，原因：${response.data.message}`);
 					}
 				} catch (error) {
 					console.error("上传文件时出错:", error);
@@ -120,15 +121,15 @@
 				}
 			},
 
-		// 加载时空数据库列表（从数据库查询表格）
+		// 加载时空数据库列表
 		async loadDatabases() {
 			try {
-				const response = await this.$axios.get("/api/get_databases");
+				const response = await this.$axios.get(`${this.backendUrl}/api/get_databases`);
 				if (response.data.code === 0) {
-					this.timeDatabases = response.data.databases;
-					this.loadDatabasesError = false; // 如果加载成功，重置错误标志
+						this.timeDatabases = response.data.databases;
+						this.loadDatabasesError = false; // 如果加载成功，重置错误标志
 					} else {
-					this.loadDatabasesError = true; // 加载失败
+						this.loadDatabasesError = true; // 加载失败
 					}
 				} catch (error) {
 					console.error("加载时空数据库失败:", error);
