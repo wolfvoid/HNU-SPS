@@ -5,10 +5,12 @@ HNU - Spatiotemporal Prediction System (National College Student Innovation Trai
 
 ## 开发环境
 
+- conda 24.11.3
 - node -v 22.11.0
 - npm -v 11.0.0
 - vue/cli 5.0.8
 - psql (PostgreSQL) 17.1
+- python 3.13.1
 
 
 
@@ -23,6 +25,8 @@ npm run serve
 
 ### 后端
 
+（这里还要安装requirements环境，这一步还没有导出）
+
 ```bash
 cd backend
 
@@ -33,3 +37,24 @@ cd backend
 python app.py
 ```
 
+### 数据库
+
+```bash
+# 命令行或navicat启动postgresql
+```
+
+
+
+## 项目细节
+
+前端技术栈：
+
+- Vue.js
+- Socket.IO (客户端)
+
+后端技术栈：
+
+- Flask
+- Flask-SocketIO
+- Python
+- Logging
