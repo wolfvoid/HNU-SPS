@@ -23,21 +23,26 @@
       <h3>数据库信息：{{ selectedDatabase }}</h3>
       <div v-if="loading">加载中...</div>
 
-<!-- 显示数据 -->
-<table v-if="databaseInfo && databaseInfo.length > 0">
-  <thead>
-    <tr>
-      <th v-for="(field, index) in fieldNames" :key="index">{{ field }}</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr v-for="(row, rowIndex) in databaseInfo" :key="rowIndex">
-      <td v-for="(value, colIndex) in row" :key="colIndex">{{ value }}</td>
-    </tr>
-  </tbody>
-</table>
+    <!-- 开始预测按钮 -->
+      <div class="start-prediction">
+        <button @click="startPrediction">开始预测</button>
+      </div>
 
-<p v-else>没有数据可展示。</p>
+    <!-- 显示数据 -->
+    <table v-if="databaseInfo && databaseInfo.length > 0">
+      <thead>
+        <tr>
+          <th v-for="(field, index) in fieldNames" :key="index">{{ field }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(row, rowIndex) in databaseInfo" :key="rowIndex">
+          <td v-for="(value, colIndex) in row" :key="colIndex">{{ value }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p v-else>没有数据可展示。</p>
 
 
 
@@ -47,6 +52,7 @@
         <span>第 {{ currentPage }} 页</span>
         <button @click="changePage('next')" :disabled="databaseInfo.length < pageSize">下一页</button>
       </div>
+
     </div>
   </div>
 </template>
@@ -124,6 +130,11 @@ export default {
         this.currentPage += 1;
       }
       this.fetchDatabaseInfo(this.selectedDatabase);
+    },
+
+    // 开始预测，跳转到预测页面
+    startPrediction() {
+      this.$router.push({ name: 'Prediction', params: { databaseName: this.selectedDatabase } });
     },
   },
 
@@ -221,4 +232,30 @@ p {
   background-color: #ddd;
   cursor: not-allowed;
 }
+
+.start-prediction {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.start-prediction button {
+  padding: 10px 20px;
+  font-size: 18px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.start-prediction button:hover {
+  background-color: #45a049;
+}
+
+.start-prediction button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+}
+
 </style>

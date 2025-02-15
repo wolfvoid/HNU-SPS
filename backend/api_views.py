@@ -141,13 +141,16 @@ def handle_connect():
 def handle_start_prediction(data):
     """ 接收到 start_prediction 事件时触发的事件 """
     logging.info("Prediction started.")
-
-    # 模拟推理过程，分多步进行，每步推理后发送一次结果
-    steps = 10  # 假设有 10 步推理
-    for i in range(steps):
-        time.sleep(1)  # 使用 gevent.sleep() 来避免阻塞
-        result = f"Result of step {i}"  # 模拟推理结果
-        # 通过 WebSocket 将结果发送回前端
-        emit('inference_result', {'step': i, 'result': result})
+    import random
+    for i in range(10):  # 假设发送10次数据
+        data_packet = {
+            'time': time.strftime('%H:%M:%S', time.gmtime(time.time())),
+            'x': [random.randint(50, 100), 110, 30, random.uniform(0.5, 2)],
+            'y': [random.randint(30, 60), 70, 20, random.uniform(0.5, 2)],
+            'z': [random.randint(10, 40), 60, 5, random.uniform(0.5, 2)],
+            'weighted': [random.randint(100, 200), 250, 50, random.uniform(0.5, 2)]
+        }
+        socketio.emit('inference_result', data_packet)
+        time.sleep(1)
 
     logging.info("Prediction finished.")

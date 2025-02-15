@@ -8,7 +8,7 @@
     <p>我们还提供了一个预测功能，能够根据历史数据进行精准的时间序列预测。</p>
 
     <!-- 图片3 -->
-    <img src="@/assets/wencheng.png" alt="欢迎图片3" class="image" />
+    <img :src="require('@/assets/wencheng.png')" alt="欢迎图片3" class="image" />
     </div>
 </template>
 

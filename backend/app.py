@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_cors import CORS
-from flask_socketio import SocketIO
 from config import Config
 from db import db
 import os
@@ -40,6 +39,5 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 socketio.init_app(app)
 app.register_blueprint(api_blueprint)
 app.logger.setLevel(logging.DEBUG)
-# app.config['SECRET_KEY'] = 'secret!'
 # app.run(host="0.0.0.0", port=5000, debug=True)
 socketio.run(app, host="0.0.0.0", port=5000, debug=True)

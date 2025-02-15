@@ -6,8 +6,6 @@
       <ul>
         <li><router-link to="/time-database">时间数据库管理</router-link></li>
         <li><router-link to="/csv-import">CSV 导入</router-link></li>
-        <li><router-link to="/prediction">预测</router-link></li>
-        <li><router-link to="/alert">预警功能</router-link></li>
       </ul>
     </div>
 
@@ -36,9 +34,12 @@ export default {
         '/': '主页面',
         '/time-database': '时间数据库管理',
         '/csv-import': 'CSV 文件导入',
-        '/prediction': '预测',
-        '/alert': '预警功能',
       };
+
+      // 如果路径是 /prediction/ 开头，则返回 '预测'
+      if (this.$route.path.startsWith('/prediction/')) {
+        return '预测';
+      }
 
       return pageTitles[this.$route.path] || '未知页面';
     },
@@ -56,7 +57,8 @@ export default {
 
 body {
   font-family: 'Arial', sans-serif;
-  background-color: #f4f9fc;  /* 淡蓝色背景 */
+  background-color: #f4f9fc;
+  /* 淡蓝色背景 */
   color: #333;
   line-height: 1.6;
 }
@@ -73,7 +75,8 @@ a {
   top: 0;
   left: 0;
   height: 100%;
-  background-color: #e0f7fa;  /* 淡蓝色 */
+  background-color: #e0f7fa;
+  /* 淡蓝色 */
   padding: 20px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
@@ -81,7 +84,8 @@ a {
 #sidebar h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #00796b;  /* 深绿色 */
+  color: #00796b;
+  /* 深绿色 */
   padding-bottom: 20px;
 }
 
@@ -96,21 +100,25 @@ a {
 
 #sidebar a {
   font-size: 1rem;
-  color: #00796b;  /* 深绿色 */
+  color: #00796b;
+  /* 深绿色 */
 }
 
 #sidebar a:hover {
-  color: #004d40;  /* 更深的绿色 */
+  color: #004d40;
+  /* 更深的绿色 */
 }
 
 /* 主内容区样式 */
 #main-content {
-  margin-left: 240px;  /* 留出侧边栏位置 */
+  margin-left: 240px;
+  /* 留出侧边栏位置 */
   padding: 20px;
 }
 
 header {
-  background-color: #ffffff;  /* 白色背景 */
+  background-color: #ffffff;
+  /* 白色背景 */
   padding: 10px;
   border-bottom: 1px solid #00796b;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -119,12 +127,14 @@ header {
 header h1 {
   margin: 0;
   font-size: 1.8rem;
-  color: #00796b;  /* 深绿色 */
+  color: #00796b;
+  /* 深绿色 */
 }
 
 main {
   padding: 20px;
-  background-color: #ffffff;  /* 白色背景 */
+  background-color: #ffffff;
+  /* 白色背景 */
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   margin-top: 20px;

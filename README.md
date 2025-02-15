@@ -51,6 +51,7 @@ python app.py
 
 - Vue.js
 - Socket.IO (客户端)
+- ECharts
 
 后端技术栈：
 
