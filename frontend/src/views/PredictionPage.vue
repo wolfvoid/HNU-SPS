@@ -14,7 +14,7 @@
         <div class="charts-container">
             <div v-for="(chartData, index) in chartsData" :key="index" class="chart-box">
                 <div class="chart-title">{{ chartData.title }}</div>
-                <div ref="chart" :id="'chart-' + index" class="chart"></div>
+                <div :id="'chart-' + index" class="chart"></div>
                 <div class="rate">变化率：{{ chartData.rate }}</div>
             </div>
         </div>
@@ -33,58 +33,116 @@ export default {
     data() {
         return {
             socket: null,
-            alertButtonText: "开启预警", // 默认按钮文本
-            alertShow: false,  // 控制警报线显示
-            chartsData: [
-                { title: "X 采集值", data: [], rate: 0, upperLimit: [], lowerLimit: [] },
-                { title: "Y 采集值", data: [], rate: 0, upperLimit: [], lowerLimit: [] },
-                { title: "Z 采集值", data: [], rate: 0, upperLimit: [], lowerLimit: [] },
-                { title: "加权综合评判值", data: [], rate: 0, upperLimit: [], lowerLimit: [] },
-            ],
+            alertButtonText: "开启预警",
+            alertShow: false,
+            chartsData: [],
+            charts: [] // 存储 ECharts 实例
         };
     },
     methods: {
         // 开始推理请求
         startInference() {
             // 清空当前图表数据
-            this.chartsData.forEach(chartData => {
-                chartData.data = [];
-                chartData.upperLimit = [];
-                chartData.lowerLimit = [];
-                chartData.rate = 0;
-            });
+            this.chartsData = [];
+            this.charts = [];
 
             if (!this.socket) {
-                this.socket = io("http://localhost:5000"); // 与后端建立连接
+                this.socket = io("http://localhost:5000");
             }
 
             this.socket.on("connect", () => {
                 console.log("Connected to server");
-                this.socket.emit("start_prediction", { database: this.databaseName }); // 发送数据库信息和推理开始信号
+                this.socket.emit("start_prediction", { database: this.databaseName });
             });
 
             this.socket.on("connected", (data) => {
-                console.log(data.message); // 连接成功的消息
+                console.log(data.message);
             });
 
+            // 处理历史数据
             this.socket.on("inference_result", (data) => {
                 console.log("Received result from backend:", data);
 
-                // 更新每个图表的数据
-                this.chartsData.forEach((chartData, index) => {
-                    const key = ["x", "y", "z", "weighted"][index]; // 获取图表数据的对应字段
-                    const currentData = data[key];  // 获取当前字段的数据
-                    if (currentData && currentData.length > 0) {
-                        chartData.data.push(currentData[0]);  // 添加数据中的第一个值
-                        chartData.upperLimit.push(currentData[1]); // 上界
-                        chartData.lowerLimit.push(currentData[2]); // 下界
-                        chartData.rate = currentData[3]; // 更新变化率
-                    }
-                });
+                if (data.history_weighted) {
+                    this.processHistoryData(data.history_weighted);
+                } else if (data.predicted_weighted) {
+                    this.processPredictionData(data);
+                }
+            });
+        },
 
-                // 在图表渲染后更新显示
-                this.$nextTick(() => {
-                    this.updateCharts(); // 更新图表
+        // 处理历史数据
+        processHistoryData(history_weighted) {
+            if (this.chartsData.length === 0) {
+                Object.keys(history_weighted[0]).forEach((key, index) => {
+                    this.chartsData.push({
+                        title: `变量 ${index + 1}`,
+                        historyData: [],
+                        predictedData: [],
+                        upperLimit: [],
+                        lowerLimit: [],
+                        rate: 0
+                    });
+                });
+            }
+
+            this.chartsData.forEach((chartData, index) => {
+                const key = Object.keys(history_weighted[0])[index];
+                chartData.historyData = history_weighted.map(item => item[key]);
+            });
+
+            this.$nextTick(() => {
+                this.initCharts();
+            });
+        },
+
+        // 处理预测数据
+        processPredictionData({ predicted_weighted, upper_bound, lower_bound }) {
+            this.chartsData.forEach((chartData, index) => {
+                const key = Object.keys(predicted_weighted[0])[index];
+
+                chartData.predictedData.push(...predicted_weighted.map(item => item[key]));
+                chartData.upperLimit.push(...upper_bound.map(item => item[key]));
+                chartData.lowerLimit.push(...lower_bound.map(item => item[key]));
+            });
+
+            this.$nextTick(() => {
+                this.updateCharts();
+            });
+        },
+
+        // 初始化图表
+        initCharts() {
+            this.chartsData.forEach((chartData, index) => {
+                const chartDom = document.getElementById(`chart-${index}`);
+                if (!chartDom) return;
+
+                const myChart = echarts.init(chartDom);
+                this.charts[index] = myChart;
+
+                myChart.setOption({
+                    title: {
+                        text: chartData.title,
+                    },
+                    tooltip: {
+                        trigger: "axis",
+                    },
+                    xAxis: {
+                        type: "category",
+                        data: chartData.historyData.map((_, i) => `Time ${i + 1}`)
+                    },
+                    yAxis: {
+                        type: "value",
+                        min: 0,
+                    },
+                    series: [
+                        {
+                            name: "历史数据",
+                            type: "line",
+                            data: chartData.historyData,
+                            itemStyle: { color: "#000000" } // 历史数据改为黑色
+                        }
+                    ]
                 });
             });
         },
@@ -92,70 +150,77 @@ export default {
         // 更新图表
         updateCharts() {
             this.chartsData.forEach((chartData, index) => {
-                const chart = this.$refs.chart[index]; // 获取每个图表的 DOM 引用
-                if (chart) {
-                    const myChart = echarts.getInstanceByDom(chart) || echarts.init(chart);
-                    const option = {
-                        title: {
-                            text: chartData.title,
-                        },
-                        tooltip: {
-                            trigger: "axis",
-                        },
-                        xAxis: {
-                            type: "category",
-                            data: this.chartsData[0].data.map((_, i) => `Time ${i + 1}`), // 用时间作为x轴标签
-                        },
-                        yAxis: {
-                            type: "value",
-                            min: 0,
-                        },
-                        series: [
-                            {
-                                name: "数据值",
-                                type: "line",
-                                data: chartData.data,
-                                itemStyle: {
-                                    color: "#1f77b4", // 蓝色数据值
-                                },
-                            },
-                            {
-                                name: "上界",
-                                type: "line",
-                                data: chartData.upperLimit,
-                                lineStyle: {
-                                    color: "#e74c3c", // 红色
-                                    type: "dashed",
-                                    opacity: this.alertShow ? 1 : 0, // 控制上界显示
-                                },
-                                symbol: this.alertShow ? 'circle' : 'none', // 控制上界点显示
-                                symbolSize: 6,
-                                itemStyle: {
-                                    color: this.alertShow ? "#e74c3c" : "transparent", // 红色点
-                                },
-                            },
-                            {
-                                name: "下界",
-                                type: "line",
-                                data: chartData.lowerLimit,
-                                lineStyle: {
-                                    color: "#f1c40f", // 黄色
-                                    type: "dashed",
-                                    opacity: this.alertShow ? 1 : 0, // 控制下界显示
-                                },
-                                symbol: this.alertShow ? 'circle' : 'none', // 控制下界点显示
-                                symbolSize: 6,
-                                itemStyle: {
-                                    color: this.alertShow ? "#f1c40f" : "transparent", // 黄色点
-                                },
-                            },
-                        ],
-                    };
+                const myChart = this.charts[index];
+                if (!myChart) return;
 
-                    // 设置选项并渲染图表
-                    myChart.resize();
-                    myChart.setOption(option);
-                }
+                const historyLength = chartData.historyData.length;
+                const totalXData = [
+                    ...chartData.historyData.map((_, i) => `Time ${i + 1}`),
+                    ...chartData.predictedData.map((_, i) => `T' ${historyLength + i + 1}`)
+                ];
+
+                const lastHistoryValue = chartData.historyData[historyLength - 1];  //把预测数据添加一项，等于历史数据最后的值，这样就可以使预测值和历史值连续
+
+
+                myChart.setOption({
+                    tooltip: {
+                        trigger: "axis",
+                        axisPointer: {
+                            type: "line" // 可选 "shadow"（柱状图适用）
+                        },
+                        // formatter: function (params) {
+                        //     let result = params[0].axisValue + "<br/>";
+                        //     params.forEach(item => {
+                        //         result += item.marker + " " + item.seriesName + ": " + item.data + "<br/>";
+                        //     });
+                        //     return result;
+                        // }
+                    },
+                    xAxis: {
+                        type: "category",
+                        data: totalXData
+                    },
+                    series: [
+                        {
+                            name: "历史数据",
+                            type: "line",
+                            data: chartData.historyData,
+                            itemStyle: { color: "#000000" } // 确保历史数据颜色为黑色
+                        },
+                        {
+                            name: "预测数据",
+                            type: "line",
+                            data: [...new Array(historyLength - 1).fill(null), lastHistoryValue, ...chartData.predictedData],
+                            itemStyle: { color: "#ff7f0e" }
+                        },
+                        {
+                            name: "上界",
+                            type: "line",
+                            data: [...new Array(historyLength).fill(null), ...chartData.upperLimit],
+                            lineStyle: {
+                                color: "#e74c3c",
+                                type: "dashed",
+                                opacity: this.alertShow ? 1 : 0
+                            },
+                            symbol: this.alertShow ? 'circle' : 'none',
+                            symbolSize: 6,
+                            itemStyle: { color: this.alertShow ? "#e74c3c" : "transparent" }
+                        },
+                        {
+                            name: "下界",
+                            type: "line",
+                            data: [...new Array(historyLength).fill(null), ...chartData.lowerLimit],
+                            lineStyle: {
+                                color: "#f1c40f",
+                                type: "dashed",
+                                opacity: this.alertShow ? 1 : 0
+                            },
+                            symbol: this.alertShow ? 'circle' : 'none',
+                            symbolSize: 6,
+                            itemStyle: { color: this.alertShow ? "#f1c40f" : "transparent" }
+                        }
+                    ]
+                });
             });
         },
 
@@ -163,23 +228,25 @@ export default {
         toggleAlert() {
             this.alertShow = !this.alertShow;
             this.alertButtonText = this.alertShow ? "关闭预警" : "开启预警";
-            this.updateCharts();// 立即更新图表状态
+            this.updateCharts();
         },
 
         // 返回上一页面
         goBack() {
-            this.$router.go(-1); // 返回上一页
-        },
+            this.$router.go(-1);
+        }
     },
 
     unmounted() {
         if (this.socket) {
-            this.socket.disconnect(); // 在组件销毁时断开连接
+            this.socket.disconnect();
             console.log("Disconnected from server");
         }
-    },
+    }
 };
 </script>
+
+
 
 <style scoped>
 .prediction-page {

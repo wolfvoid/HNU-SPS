@@ -6,13 +6,8 @@
     <div class="database-list">
       <h3>选择时空数据库</h3>
       <div class="database-container">
-        <div
-          v-for="(table_name, index) in timeDatabases"
-          :key="index"
-          class="database-item"
-          :class="{'selected': selectedDatabase === table_name}"
-          @click="selectDatabase(table_name)"
-        >
+        <div v-for="(table_name, index) in timeDatabases" :key="index" class="database-item"
+          :class="{ 'selected': selectedDatabase === table_name }" @click="selectDatabase(table_name)">
           {{ table_name }}
         </div>
       </div>
@@ -23,28 +18,26 @@
       <h3>数据库信息：{{ selectedDatabase }}</h3>
       <div v-if="loading">加载中...</div>
 
-    <!-- 开始预测按钮 -->
+      <!-- 开始预测按钮 -->
       <div class="start-prediction">
         <button @click="startPrediction">开始预测</button>
       </div>
 
-    <!-- 显示数据 -->
-    <table v-if="databaseInfo && databaseInfo.length > 0">
-      <thead>
-        <tr>
-          <th v-for="(field, index) in fieldNames" :key="index">{{ field }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(row, rowIndex) in databaseInfo" :key="rowIndex">
-          <td v-for="(value, colIndex) in row" :key="colIndex">{{ value }}</td>
-        </tr>
-      </tbody>
-    </table>
+      <!-- 显示数据 -->
+      <table v-if="databaseInfo && databaseInfo.length > 0">
+        <thead>
+          <tr>
+            <th v-for="(field, index) in fieldNames" :key="index">{{ field }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, rowIndex) in databaseInfo" :key="rowIndex">
+            <td v-for="(value, colIndex) in row" :key="colIndex">{{ value }}</td>
+          </tr>
+        </tbody>
+      </table>
 
-    <p v-else>没有数据可展示。</p>
-
-
+      <p v-else>没有数据可展示。</p>
 
       <!-- 分页 -->
       <div class="pagination">
@@ -52,7 +45,6 @@
         <span>第 {{ currentPage }} 页</span>
         <button @click="changePage('next')" :disabled="databaseInfo.length < pageSize">下一页</button>
       </div>
-
     </div>
   </div>
 </template>
@@ -94,6 +86,8 @@ export default {
     // 选择一个数据库，获取其字段信息和数据
     async selectDatabase(databaseName) {
       this.selectedDatabase = databaseName;
+      this.databaseInfo = []; // Reset database info whenever a new database is selected
+      this.currentPage = 1; // Reset current page to 1 whenever a new database is selected
       await this.fetchDatabaseInfo(databaseName);
     },
 
@@ -107,11 +101,9 @@ export default {
           `${this.backendUrl}/api/database/${databaseName}/info?start=${start}&end=${end}`
         );
 
-        console.log(response.data.code)
         if (response.data.code === 0) {
           this.fieldNames = response.data.fieldNames; // 假设返回字段名
-            this.databaseInfo = response.data.data; // 假设返回数据
-          console.log(this.databaseInfo)
+          this.databaseInfo = response.data.data; // 假设返回数据
         } else {
           console.error("获取数据库信息失败");
         }
@@ -257,5 +249,4 @@ p {
   background-color: #ddd;
   cursor: not-allowed;
 }
-
 </style>

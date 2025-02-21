@@ -8,15 +8,18 @@ from sqlalchemy import text
 import os
 import time
 import csv
-from db import check_table_exists,create_table_from_csv,insert_csv_data, get_all_databases, get_columns_of_table, get_table_data
+from db import check_table_exists, create_table_from_csv, insert_csv_data, get_all_databases, get_columns_of_table, get_table_data
 import logging
 from datetime import datetime
 from decimal import Decimal
 from flask import Blueprint
+from bound_compute import TimeSeriesForecaster
+import numpy as np
 
 api_blueprint = Blueprint('api', __name__)
 socketio = SocketIO(cors_allowed_origins="*")   # 初始化 SocketIO
 UPLOAD_FOLDER = './uploads'
+
 
 def delimiter_detect(file_path):
     with open(file_path, newline='', encoding='utf-8') as csvfile:
@@ -28,6 +31,7 @@ def delimiter_detect(file_path):
         logging.info("333")
         return delimiter
 
+
 def custom_serializer(obj):
     if isinstance(obj, Decimal):
         return float(obj)  # 转换 Decimal 为浮点数
@@ -37,12 +41,16 @@ def custom_serializer(obj):
         return obj
 
 # test
+
+
 @api_blueprint.route('/')
 def index():
     result = db.session.execute(text('SELECT 1'))
     return f"Database connection successful: {result}"
 
 # 返回所有数据库名称
+
+
 @api_blueprint.route('/api/get_databases', methods=['GET'])
 def get_databases():
     logging.info("backend:get_databases")
@@ -55,12 +63,15 @@ def get_databases():
         return jsonify({"error": str(e)}), 500
 
 # 返回数据库中所有表的名称
+
+
 @api_blueprint.route('/api/database/<table_name>/info', methods=['GET'])
 def get_table_info(table_name):
     logging.info(f"backend: get table info: {table_name}")
     try:
         # 获取请求参数 start 和 end
-        valid_table_name = f"table_{table_name}".replace('.', '_').replace('-', '_')
+        valid_table_name = f"table_{table_name}".replace(
+            '.', '_').replace('-', '_')
         start = int(request.args.get('start', 0))
         end = int(request.args.get('end', 50))  # 默认每次请求 50 行数据
 
@@ -74,7 +85,8 @@ def get_table_info(table_name):
         if data is None:
             return jsonify({"code": 1, "message": "Error fetching data."}), 200
 
-        formatted_data = [tuple(custom_serializer(value) for value in row) for row in data]
+        formatted_data = [tuple(custom_serializer(value)
+                                for value in row) for row in data]
 
         logging.info(formatted_data)
 
@@ -84,12 +96,13 @@ def get_table_info(table_name):
             "data": formatted_data  # 每行是一个元组
         }), 200
 
-
     except Exception as e:
         print(f"Error in get_database_info: {e}")
         return jsonify({"code": 1, "message": "Internal server error."}), 200
 
 # 接收csv并写入数据库
+
+
 @api_blueprint.route('/api/upload_csv', methods=['POST'])
 def upload_csv():
     logging.info("backend: upload_csv")
@@ -121,7 +134,8 @@ def upload_csv():
             logging.info(headers)
             rows = [tuple(row) for row in csvreader]
             # 创建新表格
-            valid_table_name = f"table_{file_name}".replace('.', '_').replace('-', '_')
+            valid_table_name = f"table_{file_name}".replace(
+                '.', '_').replace('-', '_')
             create_table_from_csv(valid_table_name, headers)
             # 插入数据到新表格
             insert_csv_data(valid_table_name, headers, rows)
@@ -137,20 +151,52 @@ def handle_connect():
     logging.info("Client connected.")
     emit('connected', {'message': 'Connection established'})
 
+
 @socketio.on('start_prediction')
 def handle_start_prediction(data):
-    """ 接收到 start_prediction 事件时触发的事件 """
+    """
+    处理前端请求，执行预测并通过 socket 发送结果
+    输入:
+    - data: 前端发送的数据，未使用
+    """
     logging.info("Prediction started.")
-    import random
-    for i in range(10):  # 假设发送10次数据
-        data_packet = {
-            'time': time.strftime('%H:%M:%S', time.gmtime(time.time())),
-            'x': [random.randint(50, 100), 110, 30, random.uniform(0.5, 2)],
-            'y': [random.randint(30, 60), 70, 20, random.uniform(0.5, 2)],
-            'z': [random.randint(10, 40), 60, 5, random.uniform(0.5, 2)],
-            'weighted': [random.randint(100, 200), 250, 50, random.uniform(0.5, 2)]
-        }
-        socketio.emit('inference_result', data_packet)
+    M, C, V = 30, 5, 3  # 设定数据集大小
+    data = np.random.rand(M, C, V)  # 生成随机数据
+
+    T, T_prime = 5, 1  # 设置历史窗口和预测步长
+    current_index = 0  # 滑动窗口起始索引
+
+    first_forecaster = TimeSeriesForecaster(
+        data[current_index:current_index + T + T_prime], T, T_prime)
+    history_weighted = first_forecaster.history_weighted()
+    weighted_result, lower_bound, upper_bound = first_forecaster.forward()
+
+    # 发送历史加权值 + 第一轮预测数据
+    socketio.emit('inference_result', {
+        'history_weighted': history_weighted.tolist()
+    })
+    time.sleep(0.1)
+    socketio.emit('inference_result', {
+        'predicted_weighted': weighted_result.tolist(),
+        'lower_bound': lower_bound.tolist(),
+        'upper_bound': upper_bound.tolist()
+    })
+
+    time.sleep(1)
+    current_index += T_prime  # 向右移动预测步长
+
+    while current_index + T + T_prime <= M:
+        forecaster = TimeSeriesForecaster(
+            data[current_index:current_index + T + T_prime], T, T_prime)
+        weighted_result, lower_bound, upper_bound = forecaster.forward()
+
+        socketio.emit('inference_result', {
+            'predicted_weighted': weighted_result.tolist(),
+            'lower_bound': lower_bound.tolist(),
+            'upper_bound': upper_bound.tolist()
+        })
+
         time.sleep(1)
+        current_index += T_prime
 
     logging.info("Prediction finished.")
