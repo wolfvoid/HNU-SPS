@@ -126,6 +126,9 @@ export default {
                     },
                     tooltip: {
                         trigger: "axis",
+                        axisPointer: {
+                            type: "line"
+                        },
                     },
                     xAxis: {
                         type: "category",
@@ -166,15 +169,17 @@ export default {
                     tooltip: {
                         trigger: "axis",
                         axisPointer: {
-                            type: "line" // 可选 "shadow"（柱状图适用）
+                            type: "line"
                         },
-                        // formatter: function (params) {
-                        //     let result = params[0].axisValue + "<br/>";
-                        //     params.forEach(item => {
-                        //         result += item.marker + " " + item.seriesName + ": " + item.data + "<br/>";
-                        //     });
-                        //     return result;
-                        // }
+                        formatter: function (params) {
+                            let result = params[0].axisValue + "<br/>";
+                            params.forEach(item => {
+                                if (item.data !== null) {
+                                    result += `${item.marker} ${item.seriesName}: ${item.data} <br/>`;
+                                }
+                            });
+                            return result;
+                        }
                     },
                     xAxis: {
                         type: "category",
@@ -190,13 +195,15 @@ export default {
                         {
                             name: "预测数据",
                             type: "line",
-                            data: [...new Array(historyLength - 1).fill(null), lastHistoryValue, ...chartData.predictedData],
+                            showSymbol: true,
+                            symbolSize: 6,
+                            data: [...new Array(historyLength - 1).fill(undefined), lastHistoryValue, ...chartData.predictedData],
                             itemStyle: { color: "#ff7f0e" }
                         },
                         {
                             name: "上界",
                             type: "line",
-                            data: [...new Array(historyLength).fill(null), ...chartData.upperLimit],
+                            data: [...new Array(historyLength).fill(undefined), ...chartData.upperLimit],
                             lineStyle: {
                                 color: "#e74c3c",
                                 type: "dashed",
@@ -209,7 +216,7 @@ export default {
                         {
                             name: "下界",
                             type: "line",
-                            data: [...new Array(historyLength).fill(null), ...chartData.lowerLimit],
+                            data: [...new Array(historyLength).fill(undefined), ...chartData.lowerLimit],
                             lineStyle: {
                                 color: "#f1c40f",
                                 type: "dashed",

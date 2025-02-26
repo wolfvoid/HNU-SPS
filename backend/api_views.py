@@ -163,7 +163,7 @@ def handle_start_prediction(data):
     M, C, V = 30, 5, 3  # 设定数据集大小
     data = np.random.rand(M, C, V)  # 生成随机数据
 
-    T, T_prime = 5, 1  # 设置历史窗口和预测步长
+    T, T_prime = 5, 3  # 设置历史窗口和预测步长
     current_index = 0  # 滑动窗口起始索引
 
     first_forecaster = TimeSeriesForecaster(
@@ -175,14 +175,22 @@ def handle_start_prediction(data):
     socketio.emit('inference_result', {
         'history_weighted': history_weighted.tolist()
     })
-    time.sleep(0.1)
-    socketio.emit('inference_result', {
-        'predicted_weighted': weighted_result.tolist(),
-        'lower_bound': lower_bound.tolist(),
-        'upper_bound': upper_bound.tolist()
-    })
+    time.sleep(0.5)
+    # socketio.emit('inference_result', {
+    #     'predicted_weighted': weighted_result.tolist(),
+    #     'lower_bound': lower_bound.tolist(),
+    #     'upper_bound': upper_bound.tolist()
+    # })
+    # logging.info(f"Predicted: {type(weighted_result)}")
+    for t in range(T_prime):
+        socketio.emit('inference_result', {
+            'predicted_weighted': [weighted_result[t].tolist()],
+            'lower_bound': [lower_bound[t].tolist()],
+            'upper_bound': [upper_bound[t].tolist()]
+        })
+        # logging.info(f"Predicted: {type(weighted_result[t])}")
+        time.sleep(0.5)
 
-    time.sleep(1)
     current_index += T_prime  # 向右移动预测步长
 
     while current_index + T + T_prime <= M:
@@ -190,11 +198,13 @@ def handle_start_prediction(data):
             data[current_index:current_index + T + T_prime], T, T_prime)
         weighted_result, lower_bound, upper_bound = forecaster.forward()
 
-        socketio.emit('inference_result', {
-            'predicted_weighted': weighted_result.tolist(),
-            'lower_bound': lower_bound.tolist(),
-            'upper_bound': upper_bound.tolist()
-        })
+        for t in range(T_prime):
+            socketio.emit('inference_result', {
+                'predicted_weighted': [weighted_result[t].tolist()],
+                'lower_bound': [lower_bound[t].tolist()],
+                'upper_bound': [upper_bound[t].tolist()]
+            })
+            time.sleep(0.5)
 
         time.sleep(1)
         current_index += T_prime
