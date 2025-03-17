@@ -160,6 +160,8 @@ def handle_start_prediction(data):
     - data: 前端发送的数据，未使用
     """
     logging.info("Prediction started.")
+    # 调用模型
+    # data = 模型返回
     M, C, V = 30, 5, 3  # 设定数据集大小
     data = np.random.rand(M, C, V)  # 生成随机数据
 
