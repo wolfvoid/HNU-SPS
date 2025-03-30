@@ -3,6 +3,12 @@ HNU - Spatiotemporal Prediction System (National College Student Innovation Trai
 
 
 
+## 演示视频
+
+https://www.bilibili.com/video/BV11HZvYZEb1/
+
+
+
 ## 开发环境
 
 - conda 24.11.3
