@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from flask import Blueprint
-from bound_compute import TimeSeriesForecaster
+from TimeSeriesForecaster import TimeSeriesForecaster
 import numpy as np
 
 api_blueprint = Blueprint('api', __name__)
@@ -184,11 +184,13 @@ def handle_start_prediction(data):
     #     'upper_bound': upper_bound.tolist()
     # })
     # logging.info(f"Predicted: {type(weighted_result)}")
+    health_score = [100 for _ in range(T_prime)]
     for t in range(T_prime):
         socketio.emit('inference_result', {
             'predicted_weighted': [weighted_result[t].tolist()],
             'lower_bound': [lower_bound[t].tolist()],
-            'upper_bound': [upper_bound[t].tolist()]
+            'upper_bound': [upper_bound[t].tolist()],
+            'health_score': [health_score[t]]
         })
         # logging.info(f"Predicted: {type(weighted_result[t])}")
         time.sleep(0.5)
@@ -199,12 +201,16 @@ def handle_start_prediction(data):
         forecaster = TimeSeriesForecaster(
             data[current_index:current_index + T + T_prime], T, T_prime)
         weighted_result, lower_bound, upper_bound = forecaster.forward()
+        anomalies = forecaster.detect_anomalies(
+            weighted_result, lower_bound, upper_bound)
+        health_score = forecaster.compute_health_score(anomalies)
 
         for t in range(T_prime):
             socketio.emit('inference_result', {
                 'predicted_weighted': [weighted_result[t].tolist()],
                 'lower_bound': [lower_bound[t].tolist()],
-                'upper_bound': [upper_bound[t].tolist()]
+                'upper_bound': [upper_bound[t].tolist()],
+                'health_score': [health_score[t]]
             })
             time.sleep(0.5)
 

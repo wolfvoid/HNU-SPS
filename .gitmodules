@@ -1,0 +1,3 @@
+[submodule "HNU-CT4MTP"]
+    path = HNU-CT4MTP
+    url = https://github.com/wolfvoid/HNU-CT4MTP.git

@@ -16,6 +16,25 @@ HNU - Spatiotemporal Prediction System (National College Student Innovation Trai
 
 ## 如何开始
 
+### 后端环境配置
+
+```bash
+# if you use conda environment
+conda create --name <env> python=3.12.9
+conda activate <env>
+pip install -r requirements.txt
+
+# if you use pip environments
+python -m venv <env>
+# for Windows
+<env>\Scripts\activate
+# for macOS/Linux
+source <env>/bin/activate
+pip install -r requirements.txt
+```
+
+
+
 ### 前端
 
 ```bash
@@ -23,9 +42,9 @@ cd frontend
 npm run serve
 ```
 
-### 后端
 
-（这里还要安装requirements环境，这一步还没有导出）
+
+### 后端
 
 ```bash
 cd backend
@@ -36,6 +55,8 @@ cd backend
 
 python app.py
 ```
+
+
 
 ### 数据库
 

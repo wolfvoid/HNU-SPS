@@ -11,6 +11,12 @@
         </div>
 
         <!-- 显示推理结果 -->
+        <div class="current-health-score">
+            当前健康评分：{{ currentHealthScore }}
+        </div>
+        <div class="health-score-container">
+            <div id="health-score-chart" class="health-score-chart"></div>
+        </div>
         <div class="charts-container">
             <div v-for="(chartData, index) in chartsData" :key="index" class="chart-box">
                 <div class="chart-title">{{ chartData.title }}</div>
@@ -36,7 +42,10 @@ export default {
             alertButtonText: "开启预警",
             alertShow: false,
             chartsData: [],
-            charts: [] // 存储 ECharts 实例
+            charts: [], // 存储 ECharts 实例
+            healthScores: [], // 存储 health_score 的历史数据
+            currentHealthScore: null, // 当前的 health_score 值
+            healthScoreChart: null // 存储 health_score 图表实例
         };
     },
     methods: {
@@ -97,7 +106,7 @@ export default {
         },
 
         // 处理预测数据
-        processPredictionData({ predicted_weighted, upper_bound, lower_bound }) {
+        processPredictionData({ predicted_weighted, upper_bound, lower_bound, health_score }) {
             this.chartsData.forEach((chartData, index) => {
                 const key = Object.keys(predicted_weighted[0])[index];
 
@@ -106,8 +115,15 @@ export default {
                 chartData.lowerLimit.push(...lower_bound.map(item => item[key]));
             });
 
+            // 处理 health_score 数据
+            if (health_score && health_score.length > 0) {
+                this.healthScores.push(health_score[0]); // 添加到历史数据中
+                this.currentHealthScore = health_score[0]; // 更新当前值
+            }
+
             this.$nextTick(() => {
                 this.updateCharts();
+                this.updateHealthScoreChart(); // 更新 health_score 图表
             });
         },
 
@@ -117,9 +133,39 @@ export default {
                 const chartDom = document.getElementById(`chart-${index}`);
                 if (!chartDom) return;
 
+                // 初始化 health_score 图表
+                const healthScoreChartDom = document.getElementById('health-score-chart');
+                if (healthScoreChartDom) {
+                    this.healthScoreChart = echarts.init(healthScoreChartDom);
+                    this.healthScoreChart.setOption({
+                        title: {
+                            text: 'Health Score'
+                        },
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: this.healthScores.map((_, i) => `Time ${i + 1}`)
+                        },
+                        yAxis: {
+                            type: 'value',
+                            min: 0,
+                            max: 100 // 假设 health_score 范围是 0-100
+                        },
+                        series: [
+                            {
+                                name: 'Health Score',
+                                type: 'line',
+                                data: this.healthScores,
+                                itemStyle: { color: '#4caf50' }
+                            }
+                        ]
+                    });
+                }
+
                 const myChart = echarts.init(chartDom);
                 this.charts[index] = myChart;
-
                 myChart.setOption({
                     title: {
                         text: chartData.title,
@@ -148,6 +194,31 @@ export default {
                     ]
                 });
             });
+        },
+
+        updateHealthScoreChart() {
+            if (this.healthScoreChart) {
+
+                // 动态计算 Y 轴范围
+                const minScore = Math.floor(Math.max(...this.healthScores, 0)); // 确保至少为 0
+                const maxScore = Math.ceil(Math.min(...this.healthScores, 100)); // 确保至少为 100
+
+                this.healthScoreChart.setOption({
+                    xAxis: {
+                        data: this.healthScores.map((_, i) => `Time ${i + 1}`)
+                    },
+                    yAxis: {
+                        min: minScore, // 动态设置最小值
+                        max: maxScore, // 动态设置最大值
+                        boundaryGap: [0, '100%'] // 确保数据紧贴 Y 轴边界
+                    },
+                    series: [
+                        {
+                            data: this.healthScores
+                        }
+                    ]
+                });
+            }
         },
 
         // 更新图表
@@ -332,5 +403,20 @@ button {
     margin-top: 10px;
     font-size: 16px;
     color: #888;
+}
+
+.current-health-score {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #4caf50;
+}
+
+.health-score-container {
+    margin-top: 40px;
+}
+
+.health-score-chart {
+    width: 100%;
+    height: 300px;
 }
 </style>
